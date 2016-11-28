@@ -214,6 +214,7 @@ public class WebSocketProtocolHandshakeHandler implements HttpHandler {
      * @return          current handler
      */
     public WebSocketProtocolHandshakeHandler addExtension(ExtensionHandshake extension) {
+        System.out.println("addExt " + extension.toString());
         if (extension != null) {
             for (Handshake handshake : handshakes) {
                 handshake.addExtension(extension);

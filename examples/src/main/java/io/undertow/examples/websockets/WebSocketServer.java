@@ -27,6 +27,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
+import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
 
 import static io.undertow.Handlers.path;
 import static io.undertow.Handlers.resource;
@@ -55,7 +56,7 @@ public class WebSocketServer {
                                 });
                                 channel.resumeReceives();
                             }
-                        }))
+                        }).addExtension(new PerMessageDeflateHandshake()))
                         .addPrefixPath("/", resource(new ClassPathResourceManager(WebSocketServer.class.getClassLoader(), WebSocketServer.class.getPackage())).addWelcomeFiles("index.html")))
                 .build();
         server.start();
