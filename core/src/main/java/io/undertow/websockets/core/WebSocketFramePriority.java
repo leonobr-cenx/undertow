@@ -46,6 +46,20 @@ public class WebSocketFramePriority implements FramePriority<WebSocketChannel, S
 
     @Override
     public boolean insertFrame(StreamSinkFrameChannel newFrame, List<StreamSinkFrameChannel> pendingFrames) {
+        // returning false indicates the newFrame was not inserted in pendingFrames
+
+        // the following block returns false:
+        // - if frame type is different from PING and PONG
+        // - and order is not null and order is not the new frame and order.isOpen
+        // - and the type is not CLOSE or the frame's channel did not receive a close
+        // iow, if there is a frame waiting that isn't ping, pong or close
+
+        // the frame waiting is in strictOrderQueue
+        // method addToOrderQueue changes strictOrderQueue
+        // methods:
+        // - send(WebSocketFrameType type, long payloadSize)
+        // - send(WebSocketFrameType type)
+        // from WebSocketChannel call addToOrderQueue
 
         if (newFrame.getType() != WebSocketFrameType.PONG &&
                 newFrame.getType() != WebSocketFrameType.PING) {
@@ -72,6 +86,9 @@ public class WebSocketFramePriority implements FramePriority<WebSocketChannel, S
             newFrame.markBroken();
             return true;
         }
+
+        // returns false if the current frame is not completely sent
+        // (currentFragmentedSender is not null)
         if (currentFragmentedSender == null) {
             //we are not sending fragmented
             if (!newFrame.isWritesShutdown()) {
@@ -120,6 +137,7 @@ public class WebSocketFramePriority implements FramePriority<WebSocketChannel, S
                 pendingFrames.add(newFrame);
             }
         }
+
         if (newFrame.getType() == WebSocketFrameType.CLOSE) {
             closed = true;
         }

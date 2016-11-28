@@ -97,6 +97,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private final List<S> pendingFrames = new LinkedList<>();
     /**
      * Frames that are not yet read to send.
+     *
+     * This is the buffer shown in the heap dump containing
+     * lots of large messages.
      */
     private final Deque<S> heldFrames = new ArrayDeque<>();
 
@@ -500,6 +503,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     protected synchronized void recalculateHeldFrames() throws IOException {
         if (!heldFrames.isEmpty()) {
+            // frameAdded doesn't change the contents of heldFrames
             framePriority.frameAdded(null, pendingFrames, heldFrames);
             flushSenders();
         }
@@ -520,12 +524,18 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         try {
             int toSend = 0;
             while (!newFrames.isEmpty()) {
+                // does newFrames contain frames or channels? (see queueFrame)
                 S frame = newFrames.poll();
                 if (framePriority.insertFrame(frame, pendingFrames)) {
                     if (!heldFrames.isEmpty()) {
                         framePriority.frameAdded(frame, pendingFrames, heldFrames);
                     }
                 } else {
+                    // only here the buffer receives new items
+                    // when does insertFrame return false?
+                    // - if the 1st item in WebSocketFramePriority.strictOrderQueue
+                    //   is open and is not frame
+                    // - if frame != WebSocketFramePriority.currentFragmentedSender
                     heldFrames.add(frame);
                 }
             }
@@ -644,6 +654,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             IoUtils.safeClose(channel);
             throw UndertowMessages.MESSAGES.channelIsClosed();
         }
+        // put a channel (?!) on newFrames
         newFrames.add(channel);
         if (!flushingSenders) {
             if(channel.getIoThread() == Thread.currentThread()) {
